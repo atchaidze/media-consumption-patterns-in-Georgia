@@ -1,11 +1,32 @@
-﻿* Encoding: UTF-8.
+* Encoding: UTF-8.
 * Encoding: .
 * Encoding: .
 * Encoding: .
 * Encoding: .
+*____________________________________________________2009 data.
+GET 
+  STATA FILE='C:\Users\crrc_\OneDrive\Documents\PHD thesis\Article\CB2009_Regional_only_responses_18012011.dta'. 
+DATASET NAME DataSet1 WINDOW=FRONT.
+
+WEIGHT BY INDWT.
+
+MISSING VALUES in INTLANG to SEWGACC (-7, -9, -3).
+MISSING VALUES in HEATCCS to LISTENO(-7, -9, -3).
+MISSING VALUES in RESPINT to INTID (-7, -9, -3).
+*first and second source of information
+
+FREQUENCIES VARIABLES=INFSOU1 INFSOU2 
+  /BARCHART PERCENT 
+  /ORDER=ANALYSIS.
+
+
+
+*__________________________________________________________2024 data. 
+
 GET 
   FILE='C:\Users\crrc_\OneDrive\Documents\PHD thesis\Article\CB_2024_Geo_04.06.2024.sav'. 
  
+WEIGHT OFF.
 
 *compute normalized weights to doublecheck effects. 
 COMPUTE wt_norm=(indwt*1509) / 2887608.
@@ -13,8 +34,42 @@ VARIABLE LABELS  wt_norm 'Normalized weights'.
 EXECUTE.
 
 
+*recode wealth index.
+MISSING VALUES in c2_1 to c2_15 (-9 thru -1).
+COMPUTE wealth_index24=sum(c2_1,
+c2_2,
+c2_3,
+c2_4,
+c2_5,
+c2_6,
+c2_7,
+c2_8,
+c2_9,
+c2_10,
+c2_11,
+c2_12,
+c2_13,
+c2_14,
+c2_15).
+VARIABLE LABELS  wealth_index24 'Wealth index'.
+EXECUTE.
+
+*split by median.  wealth. 
+RANK VARIABLES=wealth_index24 (A) 
+  /NTILES(2) 
+  /PRINT=YES 
+  /TIES=MEAN.
+
+VALUE LABELS Nwealth_
+"1" "Wealth above median"
+"2" "Wealth below median".
+EXECUTE.
+
+
+
+
 *WEIGHT BY indwt.
-WEIGHT BY wt_indwt.
+WEIGHT BY indwt.
 
 MISSING VALUES in n1 to phone (-7, -9, -3).
 
@@ -31,84 +86,18 @@ VARIABLE LABELS  main_source 'main source of information'.
 VALUE LABELS main_source
 '0' "TV"
 '1' 'Word of mouth'
-'2' 'Internet and social media'
+'2' 'Internet and social media'.
 EXECUTE.
+
+
+
+
+
+
 
 *multinomial regression model:.
 
 MISSING VALUES in d9 d11 d2 age j7 (-9 thru -1).
-
-
-RECODE d2 (Lowest thru -1=SYSMIS)  (1 thru 4=1) (5=2) (6 thru 8=3) INTO edu.
-VARIABLE LABELS  edu 'Level of education'.
-VALUE LABELS edu
-'1' 'Secondary or lower'
-'2' 'Vocational'
-'3' 'Incomplete or complete tertiary'. 
-EXECUTE.
-
-*multinomial. 1st. 
-
-NOMREG main_source (BASE=FIRST ORDER=ASCENDING) BY sex d9 d11 edu WITH age j7
-  /CRITERIA CIN(95) DELTA(0) MXITER(100) MXSTEP(5) CHKSEP(20) LCONVERGE(0) PCONVERGE(0.000001)
-    SINGULAR(0.00000001)
-  /MODEL
-  /STEPWISE=PIN(.05) POUT(0.1) MINEFFECT(0) RULE(SINGLE) ENTRYMETHOD(LR) REMOVALMETHOD(LR)
-  /INTERCEPT=INCLUDE
-  /PRINT=CLASSTABLE FIT PARAMETER SUMMARY LRT CPS STEP MFI.
-
-
-
-
-*trust towards the media
-*2024
-
-
-FREQUENCIES VARIABLES=p7_12
-  /STATISTICS=MEDIAN
-  /ORDER=ANALYSIS.
-
-*tv stations to trust.
-MISSING VALUES in m2 (-9,  -7, -5).
-FREQUENCIES VARIABLES=m2
-  /ORDER=ANALYSIS.
-
-RECODE m2 (-9=SYSMIS) (-7=SYSMIS) (-3=SYSMIS) (-2=SYSMIS) (-1=SYSMIS) (-4=-4)   (301=1) (305=1) (306=1) (308=1) (302=0) (307=0) (304=0) (303=0) (ELSE=SYSMIS) INTO tru_tv.
-VARIABLE LABELS  tru_tv 'Trusts pro-government or pro-oppositional TVs'.
-VALUE LABELS tru_tv
-'-4' 'Does not trust TV channels at all'
-'0' 'Pro-oppositional'
-'1' 'Pro-governmental'. 
-EXECUTE.
-MISSING VALUES in m2 (-9,  -7, -5).
-
-*party support progov, proopp .
-RECODE p27 (301=1) (-5 thru -1=-1) (302 thru Highest=0) INTO party.
-VARIABLE LABELS  party 'Closest party'.
-VALUE LABELS party
-'-1' 'None/DK/RA'
-'0' 'Oppositional party'
-'1' 'Georgian Dream'. 
-EXECUTE.
-
-MISSING VALUES in party (-9 thru -1).
-
-WEIGHT BY wt_indwt.
-LOGISTIC REGRESSION VARIABLES party
-  /METHOD=ENTER tru_tv
-  /CONTRAST (tru_tv)=Indicator(1)
-  /CRITERIA=PIN(.05) POUT(.10) ITERATE(20) CUT(.5).
-
-
-
-*chi square test. 
-CROSSTABS
-  /TABLES=tru_tv BY party
-  /FORMAT=AVALUE TABLES
-  /STATISTICS=CHISQ CC PHI
-  /CELLS=COUNT ROW
-  /COUNT ROUND CELL.
-
 
 
 
@@ -122,10 +111,46 @@ VALUE LABELS agegroup
 '3' '55+'. 
 EXECUTE.
 
+RECODE d2 (Lowest thru -1=SYSMIS)  (1 thru 4=1) (5=2) (6 thru 8=3) INTO edu.
+VARIABLE LABELS  edu 'Level of education'.
+VALUE LABELS edu
+'1' 'Secondary or lower'
+'2' 'Vocational'
+'3' 'Incomplete or complete tertiary'. 
+EXECUTE.
 
 
-*multinomial. repeat the model. 2nd with additional variables.
-NOMREG main_source (BASE=FIRST ORDER=ASCENDING) BY agegroup sex d9 d11 edu party stratum  WITH j7
+*tv stations to trust.
+FREQUENCIES VARIABLES=m2
+  /ORDER=ANALYSIS.
+
+RECODE m2 (-9=SYSMIS) (-7=SYSMIS) (-3=SYSMIS) (-2=-1) (-1=-1)  (-5=-5) (-4=-4)   (301=1) (305=1) (308=1) (ELSE=0) INTO tru_tv.
+VARIABLE LABELS  tru_tv 'Trusts pro-government or pro-oppositional TVs'.
+
+VALUE LABELS tru_tv
+'-5'  'Dont watch TV'
+'-4' 'Dont not trust TV channels at all'
+'-1' 'Dont know / Refuse to answer'
+'1' 'Pro-governmental' 
+'0' 'Other TVs'.
+EXECUTE.
+
+
+*party support progov, proopp .
+RECODE p27 (-5 =2) (-1 =2) (-2=3) (301=0) (302 thru Highest=1) INTO party.
+VARIABLE LABELS  party 'Closest party'.
+VALUE LABELS party
+'0' 'Georgian Dream'
+'1' 'Other parties'
+'2' 'None / Dont know' 
+'3' 'Refuse to answer'. 
+EXECUTE.
+
+
+
+
+*multinomial. 1st. 
+NOMREG main_source (BASE=FIRST ORDER=ASCENDING) BY sex edu stratum party Nwealth_ agegroup  
   /CRITERIA CIN(95) DELTA(0) MXITER(100) MXSTEP(5) CHKSEP(20) LCONVERGE(0) PCONVERGE(0.000001)
     SINGULAR(0.00000001)
   /MODEL
@@ -133,17 +158,61 @@ NOMREG main_source (BASE=FIRST ORDER=ASCENDING) BY agegroup sex d9 d11 edu party
   /INTERCEPT=INCLUDE
   /PRINT=CLASSTABLE FIT PARAMETER SUMMARY LRT CPS STEP MFI.
 
+
+
 FREQUENCIES VARIABLES=m4
   /STATISTICS=MEDIAN
   /ORDER=ANALYSIS.
 
 
 CROSSTABS
-  /TABLES=main_source BY agegroup sex d9 d11 edu party
+  /TABLES=main_source BY agegroup sex edu party stratum Nwealth_
+  /FORMAT=AVALUE TABLES
+  /CELLS= COLUMN
+  /COUNT ROUND CELL.
+
+
+
+
+
+
+
+*trust towards the media 2024
+
+
+FREQUENCIES VARIABLES=p7_12
+  /STATISTICS=MEDIAN
+  /ORDER=ANALYSIS.
+
+
+
+MISSING VALUES in party (-9 thru -1).
+
+WEIGHT BY indwt.
+LOGISTIC REGRESSION VARIABLES party
+  /METHOD=ENTER tru_tv
+  /CONTRAST (tru_tv)=Indicator(1)
+  /CRITERIA=PIN(.05) POUT(.10) ITERATE(20) CUT(.5).
+
+
+
+*chi square test. 
+
+CROSSTABS
+  /TABLES=tru_tv BY party
   /FORMAT=AVALUE TABLES
   /STATISTICS=CHISQ CC PHI
-  /CELLS=COUNT COLUMN
+  /CELLS=COUNT ROW
   /COUNT ROUND CELL.
+
+
+
+
+
+
+
+
+
 
 
 
@@ -253,6 +322,13 @@ OMSEND TAG=['$Id1'].
 * FORMATS Exp_B Lower Upper (F8.3).
 *EXECUTE.
 
+
+MISSING VALUES in m4 (-9 thru -1).
+CROSSTABS 
+  /TABLES=agegroup BY m6_1 m6_2 m6_3 m6_4 m6_5 m6_6 m6_7 m6_8 m6_9 m6_999 
+  /FORMAT=AVALUE TABLES 
+  /CELLS=ROW 
+  /COUNT ROUND CELL.
 
 
 
