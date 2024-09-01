@@ -8,6 +8,15 @@ GET
   STATA FILE='C:\Users\crrc_\OneDrive\Documents\PHD thesis\Article\CB2009_Regional_only_responses_18012011.dta'. 
 DATASET NAME DataSet1 WINDOW=FRONT.
 
+USE ALL.
+COMPUTE filter_$=(COUNTRY = 3).
+VARIABLE LABELS filter_$ 'COUNTRY = 3 (FILTER)'.
+VALUE LABELS filter_$ 0 'Not Selected' 1 'Selected'.
+FORMATS filter_$ (f1.0).
+FILTER BY filter_$.
+EXECUTE.
+
+
 WEIGHT BY INDWT.
 
 MISSING VALUES in INTLANG to SEWGACC (-7, -9, -3).
@@ -61,8 +70,8 @@ RANK VARIABLES=wealth_index24 (A)
   /TIES=MEAN.
 
 VALUE LABELS Nwealth_
-"1" "Wealth above median"
-"2" "Wealth below median".
+"1" "Wealth below median"
+"2" "Wealth above median".
 EXECUTE.
 
 
@@ -329,6 +338,36 @@ CROSSTABS
   /FORMAT=AVALUE TABLES 
   /CELLS=ROW 
   /COUNT ROUND CELL.
+
+
+*Only FB users. 
+ 
+IF  (m6_1 = 1 AND m6_2 <> 1 AND m6_3 <> 1 AND m6_4 <> 1 AND m6_5 <> 1 AND m6_6 <> 1 AND m6_7 <> 1
+    AND m6_8 <> 1 AND m6_9 <> 1 AND m6_999 <> 1.) fb_only=m6_1.
+EXECUTE.
+FREQUENCIES VARIABLES=m6_1 fb_only
+  /ORDER=ANALYSIS.
+
+IF  (m6_2 = 1 AND m6_1 <> 1 AND m6_3 <> 1 AND m6_4 <> 1 AND m6_5 <> 1 AND m6_6 <> 1 AND m6_7 <> 1
+    AND m6_8 <> 1 AND m6_9 <> 1 AND m6_999 <> 1.) insta_only=m6_2.
+EXECUTE.
+
+IF  (m6_4 = 1 AND m6_1 <> 1 AND m6_3 <> 1 AND m6_2 <> 1 AND m6_5 <> 1 AND m6_6 <> 1 AND m6_7 <> 1
+    AND m6_8 <> 1 AND m6_9 <> 1 AND m6_999 <> 1.) youtube_only=m6_4.
+EXECUTE.  
+
+IF  (m6_5 = 1 AND m6_1 <> 1 AND m6_3 <> 1 AND m6_4 <> 1 AND m6_2 <> 1 AND m6_6 <> 1 AND m6_7 <> 1
+    AND m6_8 <> 1 AND m6_9 <> 1 AND m6_999 <> 1.) tiktok_only=m6_5.
+EXECUTE. 
+  
+FREQUENCIES VARIABLES= fb_only insta_only youtube_only tiktok_only
+  /ORDER=ANALYSIS.
+
+
+
+
+
+
 
 
 
